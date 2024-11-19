@@ -8,16 +8,16 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.tooling.preview.Preview
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -30,6 +30,11 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun CalculatorApp() {
+    var displayValue by remember { mutableStateOf("0") }
+    var firstOperand by remember { mutableStateOf(0.0) }
+    var secondOperand by remember { mutableStateOf(0.0) }
+    var operator by remember { mutableStateOf<String?>(null) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -37,9 +42,43 @@ fun CalculatorApp() {
             .padding(16.dp)
     ) {
         Spacer(modifier = Modifier.height(32.dp))
-        DisplayScreen("0")
+        DisplayScreen(displayValue)
         Spacer(modifier = Modifier.height(16.dp))
-        CalculatorButtons()
+        CalculatorButtons(
+            onNumberClick = { number ->
+                if (displayValue == "0" || displayValue == "0.0") {
+                    displayValue = number
+                } else {
+                    displayValue += number
+                }
+            },
+            onOperatorClick = { selectedOperator ->
+                firstOperand = displayValue.toDouble()
+                operator = selectedOperator
+                displayValue = "0"
+            },
+            onEqualClick = {
+                secondOperand = displayValue.toDouble()
+                displayValue = calculateResult(firstOperand, secondOperand, operator).toString()
+                operator = null
+            },
+            onClearClick = {
+                displayValue = "0"
+                firstOperand = 0.0
+                secondOperand = 0.0
+                operator = null
+            }
+        )
+    }
+}
+
+fun calculateResult(firstOperand: Double, secondOperand: Double, operator: String?): Double {
+    return when (operator) {
+        "+" -> firstOperand + secondOperand
+        "-" -> firstOperand - secondOperand
+        "*" -> firstOperand * secondOperand
+        "/" -> if (secondOperand != 0.0) firstOperand / secondOperand else Double.NaN
+        else -> 0.0
     }
 }
 
@@ -63,7 +102,12 @@ fun DisplayScreen(value: String) {
 }
 
 @Composable
-fun CalculatorButtons() {
+fun CalculatorButtons(
+    onNumberClick: (String) -> Unit,
+    onOperatorClick: (String) -> Unit,
+    onEqualClick: () -> Unit,
+    onClearClick: () -> Unit
+) {
     val buttonSpacing = 8.dp
 
     Column(
@@ -74,54 +118,56 @@ fun CalculatorButtons() {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(buttonSpacing)
         ) {
-            CalculatorButton("7", Modifier.weight(1f))
-            CalculatorButton("8", Modifier.weight(1f))
-            CalculatorButton("9", Modifier.weight(1f))
-            CalculatorButton("/", Modifier.weight(1f))
+            CalculatorButton("7", Modifier.weight(1f)) { onNumberClick("7") }
+            CalculatorButton("8", Modifier.weight(1f)) { onNumberClick("8") }
+            CalculatorButton("9", Modifier.weight(1f)) { onNumberClick("9") }
+            CalculatorButton("/", Modifier.weight(1f)) { onOperatorClick("/") }
         }
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(buttonSpacing)
         ) {
-            CalculatorButton("4", Modifier.weight(1f))
-            CalculatorButton("5", Modifier.weight(1f))
-            CalculatorButton("6", Modifier.weight(1f))
-            CalculatorButton("*", Modifier.weight(1f))
+            CalculatorButton("4", Modifier.weight(1f)) { onNumberClick("4") }
+            CalculatorButton("5", Modifier.weight(1f)) { onNumberClick("5") }
+            CalculatorButton("6", Modifier.weight(1f)) { onNumberClick("6") }
+            CalculatorButton("*", Modifier.weight(1f)) { onOperatorClick("*") }
         }
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(buttonSpacing)
         ) {
-            CalculatorButton("1", Modifier.weight(1f))
-            CalculatorButton("2", Modifier.weight(1f))
-            CalculatorButton("3", Modifier.weight(1f))
-            CalculatorButton("-", Modifier.weight(1f))
+            CalculatorButton("1", Modifier.weight(1f)) { onNumberClick("1") }
+            CalculatorButton("2", Modifier.weight(1f)) { onNumberClick("2") }
+            CalculatorButton("3", Modifier.weight(1f)) { onNumberClick("3") }
+            CalculatorButton("-", Modifier.weight(1f)) { onOperatorClick("-") }
         }
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(buttonSpacing)
         ) {
-            CalculatorButton("0", Modifier.weight(1f))
-            CalculatorButton(".", Modifier.weight(1f))
-            CalculatorButton("C", Modifier.weight(1f))
-            CalculatorButton("+", Modifier.weight(1f))
+            CalculatorButton("0", Modifier.weight(1f)) { onNumberClick("0") }
+            CalculatorButton(".", Modifier.weight(1f)) { onNumberClick(".") }
+            CalculatorButton("C", Modifier.weight(1f)) { onClearClick() }
+            CalculatorButton("+", Modifier.weight(1f)) { onOperatorClick("+") }
         }
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(buttonSpacing)
         ) {
-            CalculatorButton("=", Modifier.fillMaxWidth())
+            CalculatorButton("=", Modifier.fillMaxWidth()) { onEqualClick() }
         }
     }
 }
 
 @Composable
-fun CalculatorButton(symbol: String, modifier: Modifier = Modifier) {
-    //  color  fondo  botones de operaciones =)
-    val backgroundColor = if (symbol in listOf("/", "*", "-", "+", "=")) Color(0xFFADD8E6) else Color.White
-
+fun CalculatorButton(symbol: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val backgroundColor = when (symbol) {
+        "C" -> Color.Red 
+        "/", "*", "-", "+", "=" -> Color(0xFFADD8E6)
+        else -> Color.White
+    }
     Button(
-        onClick = { },
+        onClick = onClick,
         modifier = modifier
             .aspectRatio(if (symbol == "=") 4f else 1f)
             .shadow(8.dp, if (symbol == "=") RoundedCornerShape(8.dp) else CircleShape),
